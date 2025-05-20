@@ -261,6 +261,10 @@ impl IServiceManager for ServiceManager {
         self.inner.lock().unwrap().try_get_binder(name, false)
     }
 
+    fn getService2(&self, name: &str) -> rsbinder::status::Result<rsbinder::hub::android::os::Service::Service> {
+        todo!()
+    }
+
     fn addService(&self, name: &str, service: &SIBinder, allowIsolated: bool, dumpPriority: i32) -> rsbinder::status::Result<()> {
         if !Self::is_valid_service_name(name) {
             return Err(ExceptionCode::IllegalArgument.into());
@@ -314,6 +318,14 @@ impl IServiceManager for ServiceManager {
 
     fn checkService(&self, name: &str) -> rsbinder::status::Result<Option<SIBinder>> {
         self.inner.lock().unwrap().try_get_binder(name, false)
+    }
+
+    fn checkService2(&self, name: &str) -> rsbinder::status::Result<rsbinder::hub::android::os::Service::Service> {
+        todo!()
+    }
+
+    fn getUpdatableNames(&self, name: &str) -> rsbinder::status::Result<Vec<std::string::String>> {
+        todo!()
     }
 
     fn listServices(&self, dump_priority: i32) -> rsbinder::status::Result<Vec<String>> {

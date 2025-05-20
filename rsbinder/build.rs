@@ -11,6 +11,9 @@ fn main() {
         .source(PathBuf::from("aidl/android/os/IServiceManager.aidl"))
         .source(PathBuf::from("aidl/android/os/PersistableBundle.aidl"))
         .source(PathBuf::from("aidl/android/os/ServiceDebugInfo.aidl"))
+        .source(PathBuf::from("aidl/android/os/Service.aidl"))
+        .source(PathBuf::from("aidl/android/os/ServiceWithMetadata.aidl"))
+        .source(PathBuf::from("aidl/android/os/IAccessor.aidl"))
 
         .output(PathBuf::from("service_manager.rs"))
 
