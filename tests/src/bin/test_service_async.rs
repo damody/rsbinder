@@ -712,13 +712,13 @@ fn main() {
         let service_name = <BpTestService as ITestService::ITestService>::descriptor();
         let service =
             BnTestService::new_async_binder(TestService::default(), rt());
-        hub::add_service(service_name, service.as_binder()).expect("Could not register service");
+        hub::add_service(service_name, service.as_binder(), false, hub::DUMP_FLAG_PRIORITY_DEFAULT).expect("Could not register service");
 
         let versioned_service_name = <BpFooInterface as IFooInterface::IFooInterface>::descriptor();
         let versioned_service =
             BnFooInterface::new_async_binder(FooInterface, rt());
-        hub::add_service(versioned_service_name, versioned_service.as_binder())
-            .expect("Could not register service");
+        hub::add_service(versioned_service_name, versioned_service.as_binder(), false, hub::DUMP_FLAG_PRIORITY_DEFAULT)
+            .expect("Could not register versioned service");
 
         let nested_service_name =
             <INestedService::BpNestedService as INestedService::INestedService>::descriptor();
@@ -726,8 +726,8 @@ fn main() {
             NestedService,
             rt(),
         );
-        hub::add_service(nested_service_name, nested_service.as_binder())
-            .expect("Could not register service");
+        hub::add_service(nested_service_name, nested_service.as_binder(), false, hub::DUMP_FLAG_PRIORITY_DEFAULT)
+            .expect("Could not register nested service");
 
         let fixed_size_array_service_name =
             <IRepeatFixedSizeArray::BpRepeatFixedSizeArray as IRepeatFixedSizeArray::IRepeatFixedSizeArray>::descriptor();
@@ -735,8 +735,8 @@ fn main() {
             FixedSizeArrayService,
             rt(),
         );
-        hub::add_service(fixed_size_array_service_name, fixed_size_array_service.as_binder())
-        .expect("Could not register service");
+        hub::add_service(fixed_size_array_service_name, fixed_size_array_service.as_binder(), false, hub::DUMP_FLAG_PRIORITY_DEFAULT)
+            .expect("Could not register fixed size array service");
 
         // By awaiting `pending`, we yield to the runtime. This results in the current-thread
         // runtime being driven by the current thread (the main thread in this case). E.g., this

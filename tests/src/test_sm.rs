@@ -39,22 +39,22 @@ fn test_add_service() -> rsbinder::Result<()> {
     setup();
 
     let service = BnFoo::new_binder(IFooService{});
-    assert!(hub::add_service("", service.as_binder()).is_err());
+    assert!(hub::add_service("", service.as_binder(), false, hub::DUMP_FLAG_PRIORITY_DEFAULT).is_err());
 
-    assert_eq!(hub::add_service("foo", service.as_binder()), Ok(()));
+    assert_eq!(hub::add_service("foo", service.as_binder(), false, hub::DUMP_FLAG_PRIORITY_DEFAULT), Ok(()));
 
     // The maximum length of service name is 127.
     let s = std::iter::repeat('a').take(127).collect::<String>();
-    assert!(hub::add_service(&s, service.as_binder()).is_ok());
+    assert!(hub::add_service(&s, service.as_binder(), false, hub::DUMP_FLAG_PRIORITY_DEFAULT).is_ok());
 
     let s = std::iter::repeat('a').take(128).collect::<String>();
-    assert!(hub::add_service(&s, service.as_binder()).is_err());
+    assert!(hub::add_service(&s, service.as_binder(), false, hub::DUMP_FLAG_PRIORITY_DEFAULT).is_err());
 
     // Weird characters are not allowed.
-    assert!(hub::add_service("happy$foo$fo", service.as_binder()).is_err());
+    assert!(hub::add_service("happy$foo$fo", service.as_binder(), false, hub::DUMP_FLAG_PRIORITY_DEFAULT).is_err());
 
     // Overwrite the service
-    assert_eq!(hub::add_service("foo", service.as_binder()), Ok(()));
+    assert_eq!(hub::add_service("foo", service.as_binder(), false, hub::DUMP_FLAG_PRIORITY_DEFAULT), Ok(()));
 
     Ok(())
 }
@@ -89,19 +89,30 @@ fn test_get_check_list_service() -> rsbinder::Result<()> {
 fn test_notifications() -> rsbinder::Result<()> {
     setup();
 
-    struct MyServiceCallback {}
-    impl rsbinder::Interface for MyServiceCallback {}
-    impl hub::IServiceCallback for MyServiceCallback {
-        fn onRegistration(&self, name: &str, service: &rsbinder::SIBinder) -> rsbinder::status::Result<()> {
-            println!("onRegistration: {} {:?}", name, service);
-            Ok(())
+    #[cfg(target_os = "android")]
+    {
+        // 使用版本特定的 IServiceCallback
+        use hub::android::os::v35::IServiceCallback::{IServiceCallback, BnServiceCallback};
+        
+        struct MyServiceCallback {}
+        impl rsbinder::Interface for MyServiceCallback {}
+        impl IServiceCallback for MyServiceCallback {
+            fn onRegistration(&self, name: &str, service: &rsbinder::SIBinder) -> rsbinder::status::Result<()> {
+                println!("onRegistration: {} {:?}", name, service);
+                Ok(())
+            }
         }
+
+        let callback = BnServiceCallback::new_binder(MyServiceCallback{});
+
+        hub::register_for_notifications_aidl_35("mytest_service", &callback)?;
+        hub::unregister_for_notifications_aidl_35("mytest_service", &callback)?;
     }
-
-    let callback = hub::BnServiceCallback::new_binder(MyServiceCallback{});
-
-    hub::register_for_notifications("mytest_service", &callback)?;
-    hub::unregister_for_notifications("mytest_service", &callback)?;
+    
+    #[cfg(not(target_os = "android"))]
+    {
+        println!("ServiceCallback test skipped on non-Android platform");
+    }
 
     Ok(())
 }

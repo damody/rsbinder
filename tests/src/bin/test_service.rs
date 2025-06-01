@@ -649,7 +649,7 @@ fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
 
     let service_name = <BpTestService as ITestService::ITestService>::descriptor();
     let service = BnTestService::new_binder(TestService::default());
-    hub::add_service(service_name, service.as_binder()).expect("Could not register service");
+    hub::add_service(service_name, service.as_binder(), false, hub::DUMP_FLAG_PRIORITY_DEFAULT).expect("Could not register service");
 
     let recipient = Arc::new(MyDeathRecipient{});
     let result = service.as_binder().link_to_death(Arc::downgrade(&(recipient.clone() as Arc<dyn DeathRecipient>)));
@@ -663,23 +663,23 @@ fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
 
     let versioned_service_name = <BpFooInterface as IFooInterface::IFooInterface>::descriptor();
     let versioned_service = BnFooInterface::new_binder(FooInterface);
-    hub::add_service(versioned_service_name, versioned_service.as_binder())
-        .expect("Could not register service");
+    hub::add_service(versioned_service_name, versioned_service.as_binder(), false, hub::DUMP_FLAG_PRIORITY_DEFAULT)
+        .expect("Could not register versioned service");
 
     let nested_service_name =
         <INestedService::BpNestedService as INestedService::INestedService>::descriptor();
     let nested_service =
         INestedService::BnNestedService::new_binder(NestedService);
-    hub::add_service(nested_service_name, nested_service.as_binder())
-        .expect("Could not register service");
+    hub::add_service(nested_service_name, nested_service.as_binder(), false, hub::DUMP_FLAG_PRIORITY_DEFAULT)
+        .expect("Could not register nested service");
 
     let fixed_size_array_service_name =
         <IRepeatFixedSizeArray::BpRepeatFixedSizeArray as IRepeatFixedSizeArray::IRepeatFixedSizeArray>::descriptor();
     let fixed_size_array_service = IRepeatFixedSizeArray::BnRepeatFixedSizeArray::new_binder(
         FixedSizeArrayService
     );
-    hub::add_service(fixed_size_array_service_name, fixed_size_array_service.as_binder())
-        .expect("Could not register service");
+    hub::add_service(fixed_size_array_service_name, fixed_size_array_service.as_binder(), false, hub::DUMP_FLAG_PRIORITY_DEFAULT)
+        .expect("Could not register fixed size array service");
 
     Ok(ProcessState::join_thread_pool()?)
 }

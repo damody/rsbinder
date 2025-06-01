@@ -27,12 +27,15 @@ impl IHello for IHelloService {
 }
 
 fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
-    env_logger::Builder::from_env(Env::default().default_filter_or("warn")).init();
+    env_logger::Builder::from_env(Env::default().default_filter_or("info")).init();
 
     process_with_args();
 
     // Initialize ProcessState with the default binder path and the default max threads.
     ProcessState::init_default();
+
+    // Initialize ServiceManager
+    hub::init_service_manager_auto()?;
 
     // Start the thread pool.
     // This is optional. If you don't call this, only one thread will be created to handle the binder transactions.
@@ -42,7 +45,14 @@ fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
     let service = BnHello::new_binder(IHelloService{});
 
     // Add the service to binder service manager.
-    hub::add_service(SERVICE_NAME, service.as_binder())?;
+    let result = hub::add_service(SERVICE_NAME, service.as_binder(), false, hub::DUMP_FLAG_PRIORITY_DEFAULT);
+
+    match result {
+        Ok(_) => log::info!("✅ Service '{}' registered", SERVICE_NAME),
+        Err(e) => {
+            log::info!("{:?}", e);
+        }
+    }
 
     // Join the thread pool.
     // This is a blocking call. It will return when the thread pool is terminated.

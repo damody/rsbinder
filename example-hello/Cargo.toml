@@ -16,6 +16,6 @@ lazy_static = { workspace = true }
 rsbinder = { workspace = true }
 env_logger = { workspace = true }
 async-trait = { workspace = true }
-
+log = { workspace = true }
 [build-dependencies]
 rsbinder-aidl = { workspace = true }

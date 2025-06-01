@@ -96,6 +96,7 @@ pub struct Builder {
     output: PathBuf,
     enabled_async: bool,
     is_crate: bool,
+    version_prefix: Option<String>,
 }
 
 impl Default for Builder {
@@ -113,6 +114,7 @@ impl Builder {
             output: "rsbinder_generated_aidl.rs".into(),
             enabled_async: false,
             is_crate: false,
+            version_prefix: None,
         }
     }
 
@@ -142,6 +144,45 @@ impl Builder {
         self.is_crate = enable;
         type_generator::set_crate_support(enable);
         self
+    }
+
+    /// 设置版本前缀，用于区分不同Android版本的AIDL
+    /// 
+    /// # Examples
+    /// 
+    /// ```rust
+    /// use rsbinder_aidl::Builder;
+    /// 
+    /// // 生成 Android 13 (API 33) 的AIDL代码
+    /// Builder::new()
+    ///     .set_version_prefix("android_33")
+    ///     .source("path/to/android33/aidl")
+    ///     .generate()?;
+    /// ```
+    pub fn set_version_prefix(mut self, prefix: impl Into<String>) -> Self {
+        self.version_prefix = Some(prefix.into());
+        self
+    }
+
+    /// 获取当前设置的版本前缀
+    pub fn get_version_prefix(&self) -> Option<&str> {
+        self.version_prefix.as_deref()
+    }
+
+    /// 根据Android API级别设置版本前缀
+    /// 
+    /// # Examples
+    /// 
+    /// ```rust
+    /// use rsbinder_aidl::Builder;
+    /// 
+    /// Builder::new()
+    ///     .set_android_api_level(33)  // 将生成 android_33 命名空间
+    ///     .source("path/to/android33/aidl")
+    ///     .generate()?;
+    /// ```
+    pub fn set_android_api_level(self, api_level: u32) -> Self {
+        self.set_version_prefix(format!("android_{}", api_level))
     }
 
     fn parse_file(filename: &Path) -> Result<(String, parser::Document), Box<dyn Error>> {
@@ -184,6 +225,19 @@ impl Builder {
 
         package_list.sort();
 
+        // 如果设置了版本前缀，添加顶层模块
+        if let Some(ref version) = self.version_prefix {
+            content += &format!("pub mod {} {{\n", version);
+            content += "    pub mod android {\n";
+            content += "        pub mod os {\n";
+            content += &add_indent(3, &package_list.iter().map(|p| p.1.as_str()).collect::<Vec<_>>().join("\n"));
+            content += "        }\n";
+            content += "    }\n";
+            content += "}\n";
+            return Ok(content);
+        }
+
+        // 如果没有版本前缀，使用原来的逻辑
         for package in package_list {
             if namespace != package.0 {
                 let namespace_split: Vec<&str> = namespace.split('.').collect();
@@ -213,7 +267,6 @@ impl Builder {
                     content += &format!("pub mod {} {{\n", r#mod);
                     mod_count += 1;
                 }
-
             }
 
             content += &add_indent(mod_count, &package.1);
@@ -228,6 +281,10 @@ impl Builder {
     }
 
     pub fn generate(self) -> Result<(), Box<dyn Error>> {
+        if self.version_prefix.is_none() {
+            println!("Warning: No version prefix set. Multiple AIDL versions in the same project may cause conflicts.");
+        }
+
         let mut document_list = Vec::new();
 
         for source in &self.sources {
@@ -241,14 +298,16 @@ impl Builder {
 
         let mut package_list = Vec::new();
         for document in document_list {
-            println!("Generating: {}", document.0);
+            println!("Generating: {} {}", 
+                self.version_prefix.as_ref().map(|v| format!("[{}] ", v)).unwrap_or_default(),
+                document.0
+            );
             let gen = generator::Generator::new(self.enabled_async, self.is_crate);
             let package = gen.document(&document.1)?;
             package_list.push((package.0, package.1, document.0));
         }
 
         let content = self.generate_all(package_list)?;
-        // let content = add_namespace(DEFAULT_NAMESPACE, &content);
 
         fs::write(self.dest_dir.join(&self.output), content)?;
 
@@ -258,8 +317,6 @@ impl Builder {
 
 #[cfg(test)]
 mod tests {
-    // use std::path::Path;
-    // use std::fs;
     use super::*;
 
     #[test]
@@ -273,5 +330,19 @@ mod tests {
         let curr = Namespace::new("android.os.IServiceManager", Namespace::AIDL);
 
         assert_eq!(curr.relative_mod(&target), "super::super::aidl::test::IServiceCallback");
+    }
+
+    #[test]
+    fn test_version_prefix() {
+        let builder = Builder::new()
+            .set_version_prefix("android_33");
+        assert_eq!(builder.get_version_prefix(), Some("android_33"));
+    }
+
+    #[test]
+    fn test_android_api_level() {
+        let builder = Builder::new()
+            .set_android_api_level(33);
+        assert_eq!(builder.get_version_prefix(), Some("android_33"));
     }
 }
